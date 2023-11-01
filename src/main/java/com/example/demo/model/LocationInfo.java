@@ -1,5 +1,7 @@
 package com.example.demo.model;
 
+import java.util.Date;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,4 +39,9 @@ public class LocationInfo {
     @Getter
     @Setter
     private String lastFlag;
+    
+    @Column(name = "update_time", updatable = false, insertable = false)
+    @Getter
+    @Setter
+    private String updateTime;
 }

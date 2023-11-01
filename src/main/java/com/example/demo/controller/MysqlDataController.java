@@ -1,11 +1,14 @@
 package com.example.demo.controller;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,12 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.model.LocationInfo;
 import com.example.demo.repository.LocationInfoRepository;
 import com.example.demo.service.LocationService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeCreator;
 
 import lombok.RequiredArgsConstructor;
 
-//@CrossOrigin(origins = "http://localhost:8081")
+@CrossOrigin(origins = "https://www.mimamaori.tech")
 @RestController
 @RequestMapping("/")
 @RequiredArgsConstructor
@@ -39,7 +40,7 @@ public class MysqlDataController {
   }
   @GetMapping("/save")
   @PostMapping
-  public JsonNode saveLocation(
+  public String saveLocation(
 		  @RequestParam(required = true)String userId,
 		  @RequestParam(required = true)String latitude, 
 		  @RequestParam(required = true)String longtitude) {
@@ -58,6 +59,7 @@ public class MysqlDataController {
 	  LocationInfo locationInfo = new LocationInfo();
 	  locationInfo.setLatitude(LocationData.getLatitude());
 	  locationInfo.setLongitude(LocationData.getLongitude());
+	  locationInfo.setUpdateTime(formatTime());
 	  List<LocationInfo> list = new ArrayList<LocationInfo>();
 	  list.add(locationInfo);
     return new ResponseEntity<List<LocationInfo>>(list, HttpStatus.OK);
@@ -72,5 +74,10 @@ public class MysqlDataController {
 	  LocationData.setLongitude(Double.valueOf(longtitude));
 	  return "OK";
 	  
+  }
+  private String formatTime() {
+	  Date exDate = new Date();
+      SimpleDateFormat exDateFormat = new SimpleDateFormat("yyyy-MM-dd hh:MM:SS");
+      return exDateFormat.format(exDate);
   }
 }

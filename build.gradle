@@ -29,7 +29,17 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.11.0'
+    // https://mvnrepository.com/artifact/org.springframework/spring-websocket
+    implementation("org.springframework:spring-websocket:6.0.13")
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation("com.google.code.gson:gson:2.10.1")
+    // https://mvnrepository.com/artifact/io.netty/netty-all
+    implementation group: 'io.netty', name: 'netty-all', version: '4.1.100.Final'
+    // https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2
+    implementation group: 'com.alibaba.fastjson2', name: 'fastjson2', version: '2.0.40'
+    
+    
+	
 }
 
 tasks.named('test') {
