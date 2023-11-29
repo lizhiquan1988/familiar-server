@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -18,7 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.model.LocationInfo;
 import com.example.demo.repository.LocationInfoRepository;
 import com.example.demo.service.LocationService;
+import com.example.demo.service.UserInfoService;
 
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @CrossOrigin(origins = "https://www.mimamaori.tech")
@@ -30,6 +34,8 @@ public class MysqlDataController {
   LocationInfoRepository locationInfoRepository;
   
   private final LocationService locationService;
+  
+  private final UserInfoService userInfoService;
   
   @GetMapping("/location")
   public ResponseEntity<List<LocationInfo>> getLocationInfo(
@@ -51,6 +57,62 @@ public class MysqlDataController {
 		  return locationService.create(userId, Double.valueOf(latitude), Double.valueOf(longtitude));
 	  }
   }
+  
+  @PostMapping("/api/register")
+  public String registerUser(HttpServletRequest request) {
+      ServletInputStream is = null;
+      try {
+          is = request.getInputStream();
+          StringBuilder sb = new StringBuilder();
+          byte[] buf = new byte[1024];
+          int len = 0;
+          while ((len = is.read(buf)) != -1) {
+              sb.append(new String(buf, 0, len));
+          }
+          System.out.println(sb.toString());
+          return userInfoService.registerUser(sb.toString());
+      } catch (IOException e) {
+          e.printStackTrace();
+      } finally {
+          try {
+              if (is != null) {
+                  is.close();
+              }
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+      return null;
+  }
+  
+
+  @PostMapping("/api/login")
+  public String userLogin(HttpServletRequest request) {
+      ServletInputStream is = null;
+      try {
+          is = request.getInputStream();
+          StringBuilder sb = new StringBuilder();
+          byte[] buf = new byte[1024];
+          int len = 0;
+          while ((len = is.read(buf)) != -1) {
+              sb.append(new String(buf, 0, len));
+          }
+          System.out.println(sb.toString());
+          return userInfoService.getUserInfo(sb.toString());
+      } catch (IOException e) {
+          e.printStackTrace();
+      } finally {
+          try {
+              if (is != null) {
+                  is.close();
+              }
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+      return null;
+  }
+  
   
   @GetMapping("/noDblocation")
   public ResponseEntity<List<LocationInfo>> getLocationInfoFromData(

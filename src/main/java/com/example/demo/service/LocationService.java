@@ -14,7 +14,7 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class LocationService {
     private final LocationInfoRepository locationInfoRepository;
-
+    
     public String create(String userId, Double latitude, Double longtitude) {
         LocationInfo location = new LocationInfo();
         location.setUserId(userId);
