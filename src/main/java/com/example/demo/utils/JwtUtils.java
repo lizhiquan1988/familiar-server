@@ -5,13 +5,14 @@ import io.jsonwebtoken.security.Keys;
 import io.netty.handler.ssl.OpenSslCertificateCompressionConfig.AlgorithmConfig;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.Map;
 
-@Data
-@ConfigurationProperties("ihrm.jwt.config")
+@Component
+@ConfigurationProperties(prefix = "ihrm.jwt.config")
 public class JwtUtils {
 	/**
 	 * 私钥

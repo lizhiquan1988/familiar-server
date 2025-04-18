@@ -8,7 +8,8 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	sourceCompatibility = '17'
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 configurations {
@@ -37,11 +38,14 @@ dependencies {
     implementation group: 'io.netty', name: 'netty-all', version: '4.1.100.Final'
     // https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2
     implementation group: 'com.alibaba.fastjson2', name: 'fastjson2', version: '2.0.40'
-    
-    
-	
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6' // JWT API
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'   // JWT 实现
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6' // 如果需要 JSON 支持
+	// Guava RateLimiter用与实现访问限流
+	implementation 'com.google.guava:guava:31.1-jre'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
