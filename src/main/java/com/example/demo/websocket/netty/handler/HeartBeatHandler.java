@@ -8,43 +8,40 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
-
 @Slf4j
 public class HeartBeatHandler extends ChannelInboundHandlerAdapter {
-    int readIdleTimes =  0;
+    private int readIdleTimes = 0;
+
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+        if (!(evt instanceof IdleStateEvent event)) return;
+
         ChannelId channelId = ctx.channel().id();
-        // 不是socket通信的channel，我们就不需要处理
-        if(!MsgProcessor.onlineUserSet.contains(channelId)){
-            return;
-        }
-        // 判断evt是否是IdleStateEvent（用于触发用户事件，包含 读空闲/写空闲/读写空闲 ）
-        if (!(evt instanceof IdleStateEvent)) {
-            return;
-        }
-        IdleStateEvent event = (IdleStateEvent)evt;// 强制类型转换
-        String eventType = null;
+        if(!MsgProcessor.onlineUserSet.contains(channelId)) return;
+
         switch (event.state()){
             case READER_IDLE:
-                eventType = "读空闲";
-                readIdleTimes ++;
+                readIdleTimes++;
+                log.debug("读空闲计数: {} - {}", readIdleTimes, ctx.channel().remoteAddress());
+                if(readIdleTimes >= 60){
+                    log.info("关闭超时 channel: {}", ctx.channel().remoteAddress());
+                    ctx.channel().close();
+                    // TODO 以后在前端关闭比较好
+                }
                 break;
             case WRITER_IDLE:
-                eventType ="写空闲";
+                log.debug("写空闲: {}", ctx.channel().remoteAddress());
                 break;
             case ALL_IDLE:
-                eventType = "读写空闲";
+                log.debug("读写空闲: {}", ctx.channel().remoteAddress());
                 break;
         }
+    }
 
-        log.info(ctx.channel().remoteAddress() + "超时事件：" + eventType);
-        if(readIdleTimes >= 30){
-            log.info("channel关闭前，users的数量为：" + MsgProcessor.onlineUsers.size());
-            Channel channel = ctx.channel();
-            // 关闭无用的channel，以防资源浪费
-            channel.close();
-            log.info("channel关闭后，users的数量为：" + MsgProcessor.onlineUsers.size());
-        }
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 只要有数据读到了，就重置读空闲计数
+        readIdleTimes = 0;
+        super.channelRead(ctx, msg);
     }
 }

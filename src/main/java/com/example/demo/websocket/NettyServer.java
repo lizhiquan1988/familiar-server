@@ -34,7 +34,7 @@ public class NettyServer implements DisposableBean {
 
     public void start() {
         try {
-            serverBootstrap.bind(port).sync();
+            serverBootstrap.bind("0.0.0.0",port).sync();
             log.info("netty websocket server 启动完毕，对应端口：{}", this.port);
         } catch (InterruptedException e) {
             close();
