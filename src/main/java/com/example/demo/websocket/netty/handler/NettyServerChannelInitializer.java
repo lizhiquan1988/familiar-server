@@ -11,11 +11,19 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("rawtypes")
+@Component
 public class NettyServerChannelInitializer extends ChannelInitializer {
+
+    private final NettyServerHandler nettyServerHandler;
+
+    public NettyServerChannelInitializer(NettyServerHandler nettyServerHandler) {
+        this.nettyServerHandler = nettyServerHandler;
+    }
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
@@ -30,6 +38,6 @@ public class NettyServerChannelInitializer extends ChannelInitializer {
         pipeline.addLast(new WebSocketServerProtocolHandler("/audio", null, true));
 
         pipeline.addLast(new HeartBeatHandler());
-        pipeline.addLast(new NettyServerHandler());
+        pipeline.addLast(nettyServerHandler);
     }
 }

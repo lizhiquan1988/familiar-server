@@ -1,9 +1,6 @@
 package com.example.demo.websocket.netty.processor;
 
-import com.example.demo.Component.GlobalState;
-import com.example.demo.Component.TranscriptionTaskManager;
 import com.example.demo.controller.SpeechToText.AssemblyAiController;
-import com.example.demo.service.SpeechToText.AssemblyAiService;
 import com.example.demo.utils.JapanLocalTime;
 import com.example.demo.utils.SpringContextUtil;
 import com.example.demo.websocket.netty.protocol.SendMessageDataForAiSpeaker;
@@ -12,7 +9,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,16 +30,11 @@ import com.example.demo.websocket.netty.protocol.SendMessageData;
 import com.example.demo.websocket.netty.util.CoderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
 public class MsgProcessor {
-
-    @Autowired
-    private GlobalState globalState;
-
     // 记录同时在线人数
     // ChannelGroup是一个线程安全的集合，它提供了打开一个Channel和不同批量的方法。
     // 可以使用ChannelGroup来将Channel分类到一个有特别意义的组中。
@@ -214,12 +205,12 @@ public class MsgProcessor {
         }
 
         // 保存文件
-        String fileName = "record_" + clientId + ".wav"; //+ System.currentTimeMillis() + ".wav";
+        String fileName = "record_" + clientId + System.currentTimeMillis() + ".wav";
         File file = new File(AUDIO_SAVE_DIR, fileName);
         try (FileOutputStream fos = new FileOutputStream(file)) {
-            byte[] data = buffer.toByteArray();
-            // TODO 以下是ESP32发送的数据必须的处理
-            addWavHeader(buffer.toByteArray(), 16000, 1,16);
+//            byte[] data = buffer.toByteArray();
+//             TODO 以下是ESP32发送的数据必须的处理
+            byte[] data = addWavHeader(buffer.toByteArray(), 32000, 1,16);
             fos.write(data);
             fos.flush();
             log.info("音频保存完成：{}", file.getAbsolutePath());

@@ -1,6 +1,5 @@
 package com.example.demo.websocket.netty.util;
 
-import com.example.demo.utils.JapanLocalTime;
 import com.example.demo.websocket.netty.handler.NettyServerHandler;
 import com.example.demo.websocket.netty.protocol.SendMessageDataForAiSpeaker;
 import jakarta.servlet.http.HttpServletResponse;

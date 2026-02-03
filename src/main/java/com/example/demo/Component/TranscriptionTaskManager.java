@@ -77,8 +77,21 @@ public class TranscriptionTaskManager {
     }
 
     private void askGpt(String transcriptId, String question) {
+        logger.info("语音识别结果：{}",question);
         String weatherInfo = addWeatherForecastQuestion(question);
         question = weatherInfo.isEmpty()? question : weatherInfo;
+        if (question.equals("playMusic")) {
+            SendMessageDataForAiSpeaker sendMessage = new SendMessageDataForAiSpeaker(
+                    "PLAY_MUSIC",
+                    JapanLocalTime.getJapanNowTimestampSeconds(),
+                    "you can over Websocket.",
+                    0,
+                    "",
+                    "");
+            SendMessageToFront.sendTo(sendMessage, logger);
+            taskResults.remove(transcriptId);
+            return;
+        }
         chatHistoryService.addMessage(new Message("user", question));
         String answer = chatGptService.askGpt(chatHistoryService.getHistory());
         chatHistoryService.addMessage(new Message("assistant", answer));
@@ -111,7 +124,7 @@ public class TranscriptionTaskManager {
     }
 
     private String addWeatherForecastQuestion(String question) {
-        if (question.contains("天気") || question.contains("天气")) {
+        if (question.contains("天気") || question.contains("天气") || question.contains("天氣")) {
             Map<String, Object> weatherResult = weatherForecastService.getOpenWeatherForecast();
 
             String prompt = null; // 用于传给 ChatGPT 的内容
@@ -142,9 +155,9 @@ public class TranscriptionTaskManager {
                 @SuppressWarnings("unchecked")
                 List<String> futureDays = (List<String>) weatherResult.get("future6days"); // 未来6天
                 Map<List<String>, Integer> futureKeywordMap = Map.of(
-                        List.of("明天", "明日"), 0,
-                        List.of("后天", "明後日"), 1,
-                        List.of("大后天"), 2
+                        List.of("明天", "明日", "あした"), 0,
+                        List.of("后天", "後天","明後日", "あさて", "あさって"), 1,
+                        List.of("大后天", "三日間後", "みかかんご"), 2
                 );
 
                 for (Map.Entry<List<String>, Integer> entry : futureKeywordMap.entrySet()) {
@@ -186,6 +199,11 @@ public class TranscriptionTaskManager {
                 }
                 return dayLabel + "天气：" + prompt + "请根据以上内容用一句话简单总结天气情况";
             }
+        } else if (question.contains("播放音乐") ||
+                question.contains("音楽流して") ||
+                question.contains("おんがくながして") ||
+                question.contains("播放音樂")) {
+            return "playMusic";
         } else {
             return "";
         }
