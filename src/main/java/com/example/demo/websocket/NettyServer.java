@@ -20,8 +20,10 @@ public class NettyServer implements DisposableBean {
     private EventLoopGroup bossGroup; // 主线程池
     private EventLoopGroup workerGroup; // 从线程池
     private ServerBootstrap serverBootstrap; // 服务端启动
+    private final NettyServerChannelInitializer initializer;
 
-    public NettyServer() {
+    public NettyServer(NettyServerChannelInitializer initializer) {
+        this.initializer = initializer;
         // 主从线程模式的线程池
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
@@ -29,12 +31,12 @@ public class NettyServer implements DisposableBean {
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 1024)
-                .childHandler(new NettyServerChannelInitializer());
+                .childHandler(initializer);
     }
 
     public void start() {
         try {
-            serverBootstrap.bind(port).sync();
+            serverBootstrap.bind("0.0.0.0",port).sync();
             log.info("netty websocket server 启动完毕，对应端口：{}", this.port);
         } catch (InterruptedException e) {
             close();

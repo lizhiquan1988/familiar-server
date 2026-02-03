@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -46,8 +46,8 @@ public class LanguageLearningUserInfo {
     private String studentName;
 
     @Column(name = "create_time", updatable = false)
-    private Date createTime; // 直接使用 LocalDateTime
+    private LocalDateTime createTime; // 直接使用 LocalDateTime
 
     @Column(name = "update_time")
-    private Date updateTime; // 直接使用 LocalDateTime
+    private LocalDateTime updateTime; // 直接使用 LocalDateTime
 }

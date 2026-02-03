@@ -6,12 +6,17 @@ import java.util.regex.Pattern;
 
 import com.example.demo.websocket.netty.protocol.MsgActionEnum;
 import com.example.demo.websocket.netty.protocol.SendMessageData;
+import com.example.demo.websocket.netty.protocol.SendMessageDataForAiSpeaker;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class CoderUtil {
 
     // 消息头 -
     private static Pattern pattern = Pattern.compile("^\\[(.*)\\](\\s\\-\\s(.*))?");
 
+    private static final Gson gson = new Gson();
 
     public static SendMessageData decode(String msg){
         if(msg == null || "".equals(msg)){
@@ -95,4 +100,55 @@ public class CoderUtil {
         }
         return prex;
     }
+
+    /**
+     * 将 SendMessageDataForAiSpeaker 转为 JSON 字符串
+     * 输出格式：
+     * {"cmd":"GPT_RESPONSE","msg":"you can over Websocket.","content":"AI回答内容"}
+     */
+    public static String encodeToJson(SendMessageDataForAiSpeaker msg) {
+        if (msg == null) {
+            return "{}";
+        }
+
+        JsonObject json = new JsonObject();
+
+        if (msg.getCmd() != null) json.addProperty("cmd", msg.getCmd());
+        if (msg.getMsg() != null) json.addProperty("msg", msg.getMsg());
+        if (msg.getContent() != null) json.addProperty("content", msg.getContent());
+        if (msg.getTime() > 0) json.addProperty("time", msg.getTime());
+        if (msg.getSize() > 0) json.addProperty("size", msg.getSize());
+        if (msg.getAddr() != null) json.addProperty("addr", msg.getAddr());
+        if (msg.getUrl() != null) json.addProperty("url", msg.getUrl());
+
+        return gson.toJson(json);
+    }
+
+    /**
+     * 从 JSON 字符串解析成 SendMessageDataForAiSpeaker 对象
+     */
+    public static SendMessageDataForAiSpeaker decodeFromJson(String jsonStr) {
+        if (jsonStr == null || jsonStr.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            JsonObject obj = JsonParser.parseString(jsonStr).getAsJsonObject();
+            SendMessageDataForAiSpeaker msg = new SendMessageDataForAiSpeaker();
+
+            if (obj.has("cmd")) msg.setCmd(obj.get("cmd").getAsString());
+            if (obj.has("msg")) msg.setMsg(obj.get("msg").getAsString());
+            if (obj.has("content")) msg.setContent(obj.get("content").getAsString());
+            if (obj.has("addr")) msg.setAddr(obj.get("addr").getAsString());
+            if (obj.has("time")) msg.setTime(obj.get("time").getAsLong());
+            if (obj.has("size")) msg.setSize(obj.get("size").getAsLong());
+            if (obj.has("url")) msg.setContent(obj.get("url").getAsString());
+
+            return msg;
+        } catch (Exception e) {
+            System.err.println("❌ JSON 解析失败: " + e.getMessage());
+            return null;
+        }
+    }
+
 }

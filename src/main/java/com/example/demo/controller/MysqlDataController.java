@@ -30,7 +30,6 @@ import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
-@CrossOrigin(origins = "https://www.mimamaori.tech")
 @RestController
 @RequestMapping("/")
 @RequiredArgsConstructor
@@ -110,6 +109,7 @@ public class MysqlDataController {
           return miniProgramUserInfoService.registerUser(queryStr);
       }
       return null;
+      
   }
 
     @PostMapping("/mini/api/updateUserInfo")

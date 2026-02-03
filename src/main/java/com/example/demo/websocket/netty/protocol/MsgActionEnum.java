@@ -9,7 +9,16 @@ public enum MsgActionEnum {
     STOPUPDATE("STOP_UPDATE", "位置更新停止"),
     CHAT("CHAT","聊天消息"),
     FLOWER("FLOWER","送鲜花"),
-    KEEPALIVE("KEEPALIVE","心跳检测");
+    GPTRESPONSE("GPTRESPONSE","ChatAI返回結果"),
+    FINISH("FINISH","前端录音结束"),
+    AUDIO_CANCEL("AUDIO_CANCEL", "取消录音"),
+    LANGUAGE("LANGUAGE","使用的语言"),
+    CHANGELANGUAGE("CHANGELANGUAGE","切换语言"),
+    CLEARAIHISTORY("CLEARAIHISTORY","清除AI历史"),
+    GETAIHISTORY("GETAIHISTORY","获取AI聊天记录条数"),
+    RESETMEDICATIONTIME("RESETMEDICATIONTIME","重置吃药提醒"),
+    KEEPALIVE("KEEPALIVE","心跳检测"),
+    HEARTBEAT("HEARTBEAT","心跳检测");
 
     private String name ;
     private String msg;
