@@ -1,12 +1,10 @@
 package com.example.demo.websocket.netty.handler;
 
 import com.example.demo.Component.GlobalState;
-import com.example.demo.controller.openai.ChatAiController;
 import com.example.demo.model.chatgpt.Message;
 import com.example.demo.service.ChatAI.ChatHistoryService;
 import com.example.demo.service.MedicineService;
 import com.example.demo.utils.JapanLocalTime;
-import com.example.demo.utils.SpringContextUtil;
 import com.example.demo.websocket.netty.processor.MsgProcessor;
 import com.example.demo.websocket.netty.protocol.MsgActionEnum;
 import com.example.demo.websocket.netty.protocol.SendMessageDataForAiSpeaker;
@@ -14,7 +12,6 @@ import com.example.demo.websocket.netty.util.SendMessageToFront;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -33,7 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @ChannelHandler.Sharable

@@ -6,38 +6,45 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.CharsetUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
-@SuppressWarnings("rawtypes")
 @Component
-public class NettyServerChannelInitializer extends ChannelInitializer {
+public class NettyServerChannelInitializer extends ChannelInitializer<Channel> {
 
     private final NettyServerHandler nettyServerHandler;
 
-    public NettyServerChannelInitializer(NettyServerHandler nettyServerHandler) {
+    private final PokerGameHandler pokerGameHandler;
+
+    public NettyServerChannelInitializer(NettyServerHandler nettyServerHandler, PokerGameHandler pokerGameHandler) {
         this.nettyServerHandler = nettyServerHandler;
+        this.pokerGameHandler = pokerGameHandler;
     }
 
     @Override
-    protected void initChannel(Channel ch) throws Exception {
+    protected void initChannel(Channel ch) {
         ChannelPipeline pipeline = ch.pipeline();
+
         pipeline.addLast(new HttpServerCodec());
-        pipeline.addLast(new HttpObjectAggregator(65536));
+//        pipeline.addLast(new HttpObjectAggregator(65536));
         pipeline.addLast(new ChunkedWriteHandler());
-        // 心跳机制
+
+        // 心跳
         pipeline.addLast(new IdleStateHandler(5, 0, 0, TimeUnit.SECONDS));
 
-        // WebSocket 协议处理
-        pipeline.addLast(new WebSocketServerProtocolHandler("/audio", null, true));
+        // 路径分发前 使用
+        pipeline.addLast(new MultiPathHandler(this.nettyServerHandler, this.pokerGameHandler));
+//        pipeline.addLast(new WebSocketServerProtocolHandler("/audio", null, true));
+
+        // 握手路径记录
+//        pipeline.addLast(new WsPathHandler());
+
 
         pipeline.addLast(new HeartBeatHandler());
-        pipeline.addLast(nettyServerHandler);
+
+//        pipeline.addLast(nettyServerHandler);
     }
 }
