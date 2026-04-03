@@ -1,42 +1,62 @@
 package com.example.demo.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class MedicineService {
 
-    @Autowired
-    private EmailService emailService;
+    private static final String MAIL_TO = "478028921@qq.com";
+
+    private final EmailService emailService;
+    private final LinePushService linePushService;
+    private final LinePushUserIdService linePushUserIdService;
 
     private boolean takenToday = false;
 
+    public MedicineService(
+            EmailService emailService,
+            LinePushService linePushService,
+            LinePushUserIdService linePushUserIdService) {
+        this.emailService = emailService;
+        this.linePushService = linePushService;
+        this.linePushUserIdService = linePushUserIdService;
+    }
+
     public void recordTaken() {
+        if (takenToday) {
+            return;
+        }
+        notifyMedicine("吃药提醒", "今天已吃药 ✅");
         takenToday = true;
-        emailService.sendEmail("478028921@qq.com", "吃药提醒", "今天已吃药 ✅");
     }
 
     public void resetTaken() {
         takenToday = false;
     }
 
-    // 每天 20:00 执行一次检查
     @Scheduled(cron = "0 0 20 * * ?")
     public void checkMedicine() {
         if (!takenToday) {
-            emailService.sendEmail("478028921@qq.com", "吃药提醒", "今天还没吃药，请记得服药 ❗");
+            notifyMedicine("吃药提醒", "今天还没吃药，请记得服药 ❗");
         }
     }
 
     @Scheduled(cron = "0 0 23 * * ?")
     public void resetMedicine() {
-        // 重置状态
         takenToday = false;
     }
 
     public void tempIsHigh(Double temp) {
-        emailService.sendEmail("478028921@qq.com", "吃药設備溫度提醒", "高溫注意 ❗ ❗ ❗溫度是：" + temp);
+        notifyMedicine("吃药設備温度提醒", "高温注意 ❗ ❗ ❗ 温度是：" + temp);
+    }
+
+    private void notifyMedicine(String subject, String message) {
+//        emailService.sendEmail(MAIL_TO, subject, message);
+        String linePushUserId = linePushUserIdService.getUserId();
+        if (StringUtils.hasText(linePushUserId)) {
+            linePushService.pushToUser(linePushUserId, message);
+        }
     }
 }
-
