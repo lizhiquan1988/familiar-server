@@ -23,5 +23,8 @@ public class RoomManager {
         return rooms.get(roomId);
     }
 
+    public static void clear() {
+        rooms.clear();
+    }
 
 }

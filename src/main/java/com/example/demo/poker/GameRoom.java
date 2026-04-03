@@ -1,5 +1,6 @@
 package com.example.demo.poker;
 
+import com.google.gson.Gson;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.Getter;
@@ -8,6 +9,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GameRoom {
+    private static final Gson GSON = new Gson();
 
     private final String roomId;
 
@@ -42,8 +44,8 @@ public class GameRoom {
     private String guard;     // 侍卫
 
     // 标牌
-    private final static String emperorCard = "BJ_0";
-    private final static String guardCard = "SJ_0";
+    private final static String emperorCardPrefix = "BJ_";
+    private final static String guardCardPrefix = "SJ_";
 
     // 阵营
     private Set<String> emperorTeam = new HashSet<>();
@@ -60,6 +62,14 @@ public class GameRoom {
 
     // ================== 玩家加入 ==================
     public synchronized void addPlayer(String playerId, Channel ch) {
+        if (playerId == null || playerId.isBlank() || ch == null) {
+            return;
+        }
+
+        if (channels.containsKey(playerId)) {
+            channels.put(playerId, ch);
+            return;
+        }
 
         if (players.size() >= 5) {
             send(ch, "房间已满");
@@ -74,6 +84,14 @@ public class GameRoom {
         if (players.size() == 5) {
             startGame();
         }
+    }
+
+    public synchronized boolean hasPlayer(String playerId) {
+        return channels.containsKey(playerId);
+    }
+
+    public synchronized boolean isFull() {
+        return players.size() >= 5;
     }
 
     // ================== 开始游戏 ==================
@@ -110,17 +128,19 @@ public class GameRoom {
         }
 
         // 找皇帝 & 侍卫
-        for (String p : players) {
-            List<String> hand = hands.get(p);
+        emperor = players.stream()
+                .filter(p -> containsCardWithPrefix(hands.get(p), emperorCardPrefix))
+                .findFirst()
+                .orElse(players.get(0));
 
-            if (hand.contains(emperorCard)) {
-                emperor = p;
-            }
-
-            if (hand.contains(guardCard)) {
-                guard = p;
-            }
-        }
+        guard = players.stream()
+                .filter(p -> !p.equals(emperor))
+                .filter(p -> containsCardWithPrefix(hands.get(p), guardCardPrefix))
+                .findFirst()
+                .orElseGet(() -> players.stream()
+                        .filter(p -> !p.equals(emperor))
+                        .findFirst()
+                        .orElse(emperor));
 
         // 阵营划分
         emperorTeam.add(emperor);
@@ -144,6 +164,7 @@ public class GameRoom {
 
         broadcast("游戏开始，" + players.get(turnIndex) + " 先出牌");
 
+        sendGameStartSnapshot();
 
     }
 
@@ -343,6 +364,69 @@ public class GameRoom {
 
     private String buildStartMsg(String playerId) {
         return "start:" + hands.get(playerId).toString();
+    }
+
+    private void sendGameStartSnapshot() {
+        for (String viewerPlayerId : players) {
+            send(viewerPlayerId, GSON.toJson(buildPlayerSnapshot(viewerPlayerId)));
+        }
+    }
+
+    private List<Map<String, Object>> buildPlayerSnapshot(String viewerPlayerId) {
+        List<Map<String, Object>> payload = new ArrayList<>();
+        for (String playerId : players) {
+            Map<String, Object> playerInfo = new LinkedHashMap<>();
+            playerInfo.put("playerId", playerId);
+            playerInfo.put("isMe", playerId.equals(viewerPlayerId));
+            playerInfo.put("identity", resolveIdentity(playerId));
+            playerInfo.put("cards", formatCardsForClient(hands.getOrDefault(playerId, Collections.emptyList())));
+            payload.add(playerInfo);
+        }
+        return payload;
+    }
+
+    private String resolveIdentity(String playerId) {
+        if (playerId == null) {
+            return "平民";
+        }
+        if (playerId.equals(emperor)) {
+            return "皇帝";
+        }
+        if (playerId.equals(guard)) {
+            return "侍卫(暗保)";
+        }
+        return "平民";
+    }
+
+    private List<String> formatCardsForClient(List<String> rawCards) {
+        List<String> cards = new ArrayList<>(rawCards.size());
+        for (String rawCard : rawCards) {
+            cards.add(formatCardForClient(rawCard));
+        }
+        return cards;
+    }
+
+    private boolean containsCardWithPrefix(List<String> hand, String prefix) {
+        for (String card : hand) {
+            if (card != null && card.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String formatCardForClient(String rawCard) {
+        if (rawCard == null || rawCard.isBlank()) {
+            return rawCard;
+        }
+        String[] parts = rawCard.split("_");
+        if (parts.length == 2) {
+            return rawCard;
+        }
+        if (parts.length == 3) {
+            return parts[1] + "_" + parts[0] + "_" + parts[2];
+        }
+        return rawCard;
     }
 
     // ================== 生成168张牌 ==================

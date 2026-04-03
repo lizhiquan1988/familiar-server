@@ -21,7 +21,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -38,16 +43,13 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
 
     private final GlobalState globalState;
     private final MedicineService medicineService;
-
     private final MsgProcessor processor = new MsgProcessor();
-    private static ChannelHandlerContext channelHandlerContext;
     private final Gson gson = new Gson();
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     private ChatHistoryService chatHistoryService;
 
-    // 存储所有连接的客户端 Channel
     public static ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     public NettyServerHandler(GlobalState globalState, MedicineService medicineService) {
@@ -58,20 +60,19 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
         channels.add(ctx.channel());
-        log.info("新客户端 {} 添加到群: ", ctx.channel().remoteAddress());
+        log.info("channel added: {}", ctx.channel().remoteAddress());
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) {
         channels.remove(ctx.channel());
-        log.info("客户端 {} 从群中删除", ctx.channel().remoteAddress());
+        log.info("channel removed: {}", ctx.channel().remoteAddress());
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         Channel channel = ctx.channel();
-        channelHandlerContext = ctx;
-        log.info("客户端 {} 上线", channel.remoteAddress());
+        log.info("channel active: {}", channel.remoteAddress());
     }
 
     @Override
@@ -86,17 +87,19 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
             } else if (frame instanceof CloseWebSocketFrame) {
                 ctx.channel().close();
             } else {
-                log.warn("未知类型的 WebSocketFrame: {}", frame.getClass().getSimpleName());
+                log.warn("unsupported WebSocketFrame type: {}", frame.getClass().getSimpleName());
             }
         } catch (Exception e) {
-            log.error("WebSocketFrame 处理异常: {}", e.getMessage(), e);
+            log.error("failed to process WebSocketFrame: {}", e.getMessage(), e);
             ctx.close();
         }
     }
 
     private void handleTextFrame(ChannelHandlerContext ctx, TextWebSocketFrame frame) {
         String text = frame.text();
-        if (text == null || text.isEmpty()) return;
+        if (text == null || text.isEmpty()) {
+            return;
+        }
 
         try {
             JsonObject json = gson.fromJson(text, JsonObject.class);
@@ -108,18 +111,19 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
                 processor.cancelRecording(ctx);
             } else if (MsgActionEnum.HEARTBEAT.getName().equals(cmd)) {
                 Channel client = ctx.channel();
-                log.info("收到来自channelId为[" + client.id() + "]的心跳包...");
-            } else if (cmd.equals(MsgActionEnum.LANGUAGE.getName())) {
-                log.info("现在的语言是：" + globalState.getValue());
+                log.info("heartbeat received from channelId=[{}]", client.id());
+            } else if (MsgActionEnum.LANGUAGE.getName().equals(cmd)) {
+                log.info("current language: {}", globalState.getValue());
                 SendMessageDataForAiSpeaker sendMessage = new SendMessageDataForAiSpeaker(
                         "CURRENT_LANGUAGE",
                         JapanLocalTime.getJapanNowTimestampSeconds(),
                         "OK",
                         0,
-                        String.valueOf(globalState.getValue()),"");
-                SendMessageToFront.sendTo(sendMessage, logger);
-            } else if (cmd.equals(MsgActionEnum.CHANGELANGUAGE.getName())) {
-                log.info("更改语言" + languageCode);
+                        String.valueOf(globalState.getValue()),
+                        "");
+                SendMessageToFront.sendTo(ctx, sendMessage, logger);
+            } else if (MsgActionEnum.CHANGELANGUAGE.getName().equals(cmd)) {
+                log.info("change language requested: {}", languageCode);
                 int changeLanguageTo = 0;
                 if (languageCode != null) {
                     changeLanguageTo = Integer.parseInt(languageCode);
@@ -130,9 +134,10 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
                         JapanLocalTime.getJapanNowTimestampSeconds(),
                         "OK",
                         0,
-                        String.valueOf(changeLanguageTo), "");
-                SendMessageToFront.sendTo(sendMessage, logger);
-            } else if (cmd.equals(MsgActionEnum.CLEARAIHISTORY.getName())) {
+                        String.valueOf(changeLanguageTo),
+                        "");
+                SendMessageToFront.sendTo(ctx, sendMessage, logger);
+            } else if (MsgActionEnum.CLEARAIHISTORY.getName().equals(cmd)) {
                 List<Message> histories = chatHistoryService.getHistory();
                 chatHistoryService.clearMessage();
                 SendMessageDataForAiSpeaker sendMessage = new SendMessageDataForAiSpeaker(
@@ -140,33 +145,36 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
                         JapanLocalTime.getJapanNowTimestampSeconds(),
                         "OK",
                         histories.size(),
-                        "","");
-                SendMessageToFront.sendTo(sendMessage, logger);
-            } else if (cmd.equals(MsgActionEnum.RESETMEDICATIONTIME.getName())) {
+                        "",
+                        "");
+                SendMessageToFront.sendTo(ctx, sendMessage, logger);
+            } else if (MsgActionEnum.RESETMEDICATIONTIME.getName().equals(cmd)) {
                 medicineService.resetMedicine();
                 SendMessageDataForAiSpeaker sendMessage = new SendMessageDataForAiSpeaker(
                         "RESET_MEDICATION_TIME",
                         JapanLocalTime.getJapanNowTimestampSeconds(),
                         "OK",
                         0,
-                        "","");
-                SendMessageToFront.sendTo(sendMessage, logger);
-            } else if (cmd.equals(MsgActionEnum.GETAIHISTORY.getName())) {
+                        "",
+                        "");
+                SendMessageToFront.sendTo(ctx, sendMessage, logger);
+            } else if (MsgActionEnum.GETAIHISTORY.getName().equals(cmd)) {
                 long aiChatHistory = chatHistoryService.getHistory().size();
                 SendMessageDataForAiSpeaker sendMessage = new SendMessageDataForAiSpeaker(
                         "CURRENT_AI_HISTORY_AMOUNT",
                         JapanLocalTime.getJapanNowTimestampSeconds(),
                         "OK",
                         aiChatHistory,
-                        "","");
-                SendMessageToFront.sendTo(sendMessage, logger);
+                        "",
+                        "");
+                SendMessageToFront.sendTo(ctx, sendMessage, logger);
             } else if (cmd != null) {
                 processor.dealMsg(ctx, text);
             } else {
-                log.warn("收到无效命令: {}", text);
+                log.warn("message missing cmd field: {}", text);
             }
         } catch (JsonSyntaxException e) {
-            log.warn("无法解析 JSON: {}, 异常: {}", text, e.getMessage());
+            log.warn("invalid JSON payload: {}, error: {}", text, e.getMessage());
         }
     }
 
@@ -174,13 +182,13 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
         ByteBuf byteBuf = frame.content();
         byte[] audioChunk = ByteBufUtil.getBytes(byteBuf);
 
-        log.info("收到音频二进制块，大小={}字节", audioChunk.length);
+        log.info("audio chunk received: {} bytes", audioChunk.length);
         processor.dealAudioChunk(ctx, audioChunk);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("连接异常：{}", cause.getMessage(), cause);
+        log.error("handler exception: {}", cause.getMessage(), cause);
         ctx.close();
     }
 
@@ -189,27 +197,26 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<WebSocketFra
         processor.removeChannelSendMsg(ctx.channel());
     }
 
-    // 服务器向客户端发送文本消息
-    public static void sendMessage(String message) {
-        if (channelHandlerContext != null) {
-            Channel client = channelHandlerContext.channel();
-            client.writeAndFlush(new TextWebSocketFrame(message));
-            log.info("服务器→客户端：{}", message);
+    public static void sendMessage(ChannelHandlerContext ctx, String message) {
+        if (ctx == null) {
+            return;
         }
-        // 发送给所有设备
-//        if (!channels.isEmpty()) {
-//            channels.writeAndFlush(new TextWebSocketFrame(message));
-//            log.info("服务器→客户端：{}", message);
-//        }
+        ctx.channel().writeAndFlush(new TextWebSocketFrame(message));
+        log.info("message sent to current channel: {}", message);
     }
 
-    // 服务器向客户端发送二进制数据
+    public static void sendMessage(String message) {
+        if (!channels.isEmpty()) {
+            channels.writeAndFlush(new TextWebSocketFrame(message));
+            log.info("message broadcast to channels: {}", message);
+        }
+    }
+
     public static void sendBinary(byte[] data) {
-        if (channelHandlerContext != null) {
-            Channel client = channelHandlerContext.channel();
+        if (!channels.isEmpty()) {
             ByteBuf buf = Unpooled.wrappedBuffer(data);
-            client.writeAndFlush(new BinaryWebSocketFrame(buf));
-            log.info("服务器→客户端（二进制）发送 {} 字节", data.length);
+            channels.writeAndFlush(new BinaryWebSocketFrame(buf));
+            log.info("binary message broadcast to channels: {} bytes", data.length);
         }
     }
 }
